@@ -1,6 +1,6 @@
 import { describe, it, beforeEach } from 'mocha';
 import assert from 'assert';
-import { KeyValAdapter } from './../src/index'; 
+import { KeyValAdapter } from './../src/index';
 import testData from './test_data';
 import Gun from 'gun/gun';
 
@@ -8,13 +8,11 @@ const put = testData.default.put;
 const get = testData.default.get;
 
 describe('KeyValAdapter: interface spec', function () {
-
-    it('should pass a batch array and callback during put', done => {
-        
+    it('should pass a batch array and callback during put', (done) => {
         // setup
         let targetLength = 0;
-        Object.keys(put.put).forEach(key => {
-            Object.keys(put.put[key]).forEach(propName => {
+        Object.keys(put.put).forEach((key) => {
+            Object.keys(put.put[key]).forEach((propName) => {
                 if (propName !== '_') {
                     targetLength++;
                 }
@@ -24,11 +22,18 @@ describe('KeyValAdapter: interface spec', function () {
         // condition
         let adapter = new KeyValAdapter({
             put: (batch, putDone) => {
-                assert.equal(batch instanceof Array, true);
+                assert.equal(batch instanceof Array, true, 'batch not array');
                 // assert.equal(batch.length, targetLength);
-                assert.equal(true, typeof putDone === 'function');
+                assert.equal(
+                    true,
+                    typeof putDone === 'function',
+                    'done nnot a function',
+                );
                 done();
-            }
+            },
+            get: (key, field, cb) => {
+                cb();
+            },
         });
         adapter.Gun = Gun;
 
@@ -36,8 +41,7 @@ describe('KeyValAdapter: interface spec', function () {
         adapter._write(put);
     });
 
-    it('should pass pass a key when requesting a full node', done => {
-    
+    it('should pass pass a key when requesting a full node', (done) => {
         // setup and condition
         let adapter = new KeyValAdapter({
             get: (key, field, getDone) => {
@@ -45,16 +49,14 @@ describe('KeyValAdapter: interface spec', function () {
                 assert.equal(field, null);
                 assert.equal(true, typeof getDone === 'function');
                 done();
-            }
+            },
         });
 
         // run
         adapter._read(get.fullNode);
     });
 
-
-    it('should pass pass a key and field when requesting a singled field', done => {
-    
+    it('should pass pass a key and field when requesting a singled field', (done) => {
         // setup and condition
         let adapter = new KeyValAdapter({
             get: (key, field, getDone) => {
@@ -62,36 +64,35 @@ describe('KeyValAdapter: interface spec', function () {
                 assert.equal(field, get.field.get['.']);
                 assert.equal(true, typeof getDone === 'function');
                 done();
-            }
+            },
         });
 
         // run
         adapter._read(get.field);
     });
 
-    it('should restructure a key:val object into a Gun-recognizable node', done => {
-    
+    it('should restructure a key:val object into a Gun-recognizable node', (done) => {
         // setup
         let results = [];
         let key = get.fullNode.get['#'];
 
         // Breakdown node into an array of results as they should be returned from an adapter
         let node = put.put[key];
-        Object.keys(node).forEach(propName => {
+        Object.keys(node).forEach((propName) => {
             if (propName !== '_' && propName) {
                 results.push({
                     key,
                     field: propName,
                     val: node[propName],
-                    state: node._['>'][propName]
+                    state: node._['>'][propName],
                 });
             }
         });
 
         let adapter = new KeyValAdapter({
             get: (key, field, getDone) => {
-              getDone(null, results);   
-            }
+                getDone(null, results);
+            },
         });
 
         // condition: when inserting into Gun it should again look like the node
@@ -104,8 +105,7 @@ describe('KeyValAdapter: interface spec', function () {
         adapter._read(get.fullNode);
     });
 
-    it('should restructure a key:val object into a Gun-recognizable node for a single field', done => {
-    
+    it('should restructure a key:val object into a Gun-recognizable node for a single field', (done) => {
         // setup
         let node;
         let getResults = (key, field) => {
@@ -113,13 +113,13 @@ describe('KeyValAdapter: interface spec', function () {
             node = put.put[key];
 
             // Breakdown node into an array of results as they should be returned from an adapter
-            Object.keys(node).forEach(propName => {
+            Object.keys(node).forEach((propName) => {
                 if (propName === field) {
                     results.push({
                         key,
                         field: propName,
                         val: node[propName],
-                        state: node._['>'][propName]
+                        state: node._['>'][propName],
                     });
                 }
             });
@@ -127,8 +127,8 @@ describe('KeyValAdapter: interface spec', function () {
         };
         let adapter = new KeyValAdapter({
             get: (key, field, getDone) => {
-              getDone(null, getResults(key, field));   
-            }
+                getDone(null, getResults(key, field));
+            },
         });
 
         // condition: when inserting into Gun it should again look like the node
@@ -140,5 +140,4 @@ describe('KeyValAdapter: interface spec', function () {
         // run
         adapter._read(get.field);
     });
-
 });
