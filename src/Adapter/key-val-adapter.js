@@ -1,6 +1,6 @@
 import BaseAdapter from './base-adapter';
 import Util from './../util';
-
+import HAM from '../HAM';
 const BATCH_TIME = 100;
 export default class KeyValAdapter extends BaseAdapter {
     constructor(adapter) {
@@ -10,24 +10,24 @@ export default class KeyValAdapter extends BaseAdapter {
         this.batchDone = {};
     }
     checkState(incoming, existing, opt) {
-        opt = Gun.num.is(opt) ? { machine: opt } : { machine: Gun.state() };
+        const machine = Gun.state();
 
-        var HAM = Gun.HAM(
-            opt.machine,
+        var hamResult = HAM(
+            machine,
             incoming['>'],
             existing['>'],
             incoming[':'],
             existing[':'],
         );
-        if (HAM.defer) {
+        if (hamResult.defer) {
             console.error('incoming node state in the future', {
                 incoming,
                 existing,
-                opt,
+                machine,
             });
             return false;
         }
-        if (!HAM.incoming) {
+        if (!hamResult.incoming) {
             return false;
         }
         return true;
