@@ -94,11 +94,10 @@ export default class BaseAdapter extends BaseExtension {
      * @instance
      * @public
      * 
-     * @param {Gun} Gun    The Gun constructor
      */
-    bootstrap(Gun) {
-        this.Gun = Gun || require('gun/gun');
-        this.outerContext.Gun = Gun;
+    bootstrap() {
+        this.Gun = global.Gun || require('gun/gun');
+        this.outerContext.Gun = this.Gun;
 
         if (!this.Gun) {
             throw "Unable to retrieve a Gun instance. This is probably because you tried to import Gun after this Gun adapter. Makes sure that you import all adapter after you've imported Gun.";
