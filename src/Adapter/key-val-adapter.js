@@ -1,8 +1,39 @@
 import BaseAdapter from './base-adapter';
 import Util from './../util';
 
+const BATCH_TIME = 100;
 export default class KeyValAdapter extends BaseAdapter {
+    constructor(adapter) {
+        super(adapter);
+        this.batchInterval = setInterval(() => this.clearBatch(), BATCH_TIME);
+        this.batchQ = {};
+        this.batchDone = {};
+    }
+    checkState(incoming, existing, opt) {
+        opt = Gun.num.is(opt) ? { machine: opt } : { machine: Gun.state() };
+        console.log('HAM2', { incoming, existing, opt });
 
+        var HAM = Gun.HAM(
+            opt.machine,
+            incoming['>'],
+            existing['>'],
+            incoming[':'],
+            existing[':'],
+        );
+        console.log('HAM result:', { HAM });
+        if (HAM.defer) {
+            console.error('incoming node state in the future', {
+                incoming,
+                existing,
+                opt,
+            });
+            return false;
+        }
+        if (!HAM.incoming) {
+            return false;
+        }
+        return true;
+    }
     /**
      *  @param {Array|Object}    result    - An array of objects (= records) like so
      *                               {
@@ -17,7 +48,10 @@ export default class KeyValAdapter extends BaseAdapter {
      */
     read(result, done) {
         if (result) {
-            const key = result instanceof Array && result.length ? result[0].key : result.key;
+            const key =
+                result instanceof Array && result.length
+                    ? result[0].key
+                    : result.key;
             result = Util.gunify(key, result);
         }
         done(null, result);
@@ -29,40 +63,59 @@ export default class KeyValAdapter extends BaseAdapter {
      *  @return {void}
      */
     write(delta, done) {
-        const keys = Object.keys(delta);
+        const soul = delta['#'],
+            field = delta['.'],
+            val = delta[':'],
+            state = delta['>'];
 
-        // Batch together key:val writes
-        const batch = [];
+        // base node
+        const writeHandler = (err, existing) => {
+            // Merge the delta with existing node
+            let errorOk = !err || err.code() === 400;
+            let validState = true;
+            if (errorOk && delta && existing && existing[0]) {
+                const existingNode = {
+                    '#': existing[0].key,
+                    '.': existing[0].field,
+                    ':': existing[0].val || { '#': existing[0].rel },
+                    '>': existing[0].state,
+                };
 
-        // Iterate through each node in the delta
-        keys.forEach(key => {
-            let nodeDelta = delta[key];
-            const conflictState = nodeDelta._['>'];
+                validState = this.checkState(delta, existingNode);
+            }
 
-            // Iterate through each field in the node delta
-            Object.keys(nodeDelta).map(field => {
-
-                // Ignore meta info
-                if (field !== '_') {
-                    let state = conflictState[field];
-
-                    // base node
-                    let node = { state, field, key };
-
-                    // Add rel or val
-                    if (this.Gun.obj.is(nodeDelta[field])) {
-                        node.rel = nodeDelta[field]['#'];
-                    } else {
-                        node.val = nodeDelta[field]; 
-                    }
-                    batch.push(node);
+            // Write if valid state to storage
+            if (validState && this.Gun.obj.is(delta)) {
+                let node = { state, field, key: soul };
+                // Add rel or val
+                if (this.Gun.obj.is(val)) {
+                    node.rel = val['#'];
+                } else {
+                    node.val = val;
                 }
-            });
-        }, this);
 
-        // Write batch
-        if (batch.length) {
-            this._put(batch, done);
+                // this._put([node], done);
+                this.batch(node, done);
+            } else done();
+        };
+
+        this._get(soul, field, writeHandler);
+    }
+
+    batch(node, done) {
+        const { key } = node;
+        const soulQ = (this.batchQ[key] = this.batchQ[key] || []);
+        this.batchDone[key] = done;
+        soulQ.push(node);
+    }
+
+    clearBatch() {
+        for (let k in this.batchQ) {
+            const nodes = this.batchQ[k];
+            const done = this.batchDone[k];
+            delete this.batchQ[k];
+            this.batchDone[k] = null;
+            this._put(nodes, done);
         }
     }
 }
