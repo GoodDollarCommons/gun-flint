@@ -11,7 +11,6 @@ export default class KeyValAdapter extends BaseAdapter {
     }
     checkState(incoming, existing, opt) {
         opt = Gun.num.is(opt) ? { machine: opt } : { machine: Gun.state() };
-        console.log('HAM2', { incoming, existing, opt });
 
         var HAM = Gun.HAM(
             opt.machine,
@@ -20,7 +19,6 @@ export default class KeyValAdapter extends BaseAdapter {
             incoming[':'],
             existing[':'],
         );
-        console.log('HAM result:', { HAM });
         if (HAM.defer) {
             console.error('incoming node state in the future', {
                 incoming,
