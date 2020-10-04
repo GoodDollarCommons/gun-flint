@@ -1,45 +1,53 @@
 function isNil(val) {
-  return val === null || val === undefined;
+    return val === null || val === undefined;
 }
 
 export default {
     noop: () => {},
     isNil,
+    isObj: (o) => {
+        return o
+            ? (o instanceof Object && o.constructor === Object) ||
+                  Object.prototype.toString
+                      .call(o)
+                      .match(/^\[object (\w+)\]$/)[1] === 'Object'
+            : false;
+    },
+
     gunify: (key, vals = []) => {
-      let node = {
-        '_': {
-          '#': key,
-          '>': {
-          }
-        }
-      };
+        let node = {
+            _: {
+                '#': key,
+                '>': {},
+            },
+        };
 
-      function applyResult(val) {
-          // metadata
-          node._['>'][val.field] = val.state;
+        function applyResult(val) {
+            // metadata
+            node._['>'][val.field] = val.state;
 
-          // relation
-          if (Object.keys(val).indexOf('rel') !== -1) {
-            node[val.field] = {
-              '#': val.rel
+            // relation
+            if (Object.keys(val).indexOf('rel') !== -1) {
+                node[val.field] = {
+                    '#': val.rel,
+                };
+            } else {
+                // value
+                node[val.field] = Object.keys(val).indexOf('val')
+                    ? val.val
+                    : null;
             }
-          } else {
+        }
 
-            // value
-            node[val.field] = Object.keys(val).indexOf('val')? val.val : null;
-          }
-      }
+        // Vals is an array. Add each to the node
+        if (vals instanceof Array && vals.length) {
+            vals.forEach(applyResult);
+        } else {
+            // Vals is an object. Just write that one.
+            applyResult(vals);
+        }
 
-      // Vals is an array. Add each to the node
-      if (vals instanceof Array && vals.length) {
-          vals.forEach(applyResult);
-      } else {
-
-        // Vals is an object. Just write that one.
-        applyResult(vals);
-      }
-
-      // finish
-      return node;
-    }
+        // finish
+        return node;
+    },
 };

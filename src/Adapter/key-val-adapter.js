@@ -83,10 +83,10 @@ export default class KeyValAdapter extends BaseAdapter {
             }
 
             // Write if valid state to storage
-            if (validState && this.Gun.obj.is(delta)) {
+            if (validState && Util.isObj(delta)) {
                 let node = { state, field, key: soul };
                 // Add rel or val
-                if (this.Gun.obj.is(val)) {
+                if (Util.isObj(val)) {
                     node.rel = val['#'];
                 } else {
                     node.val = val;
