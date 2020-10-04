@@ -1,6 +1,6 @@
 {
     "name": "@gooddollarcommons/gun-flint",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "description": "Micro-framework for building Gun adapters",
     "keywords": [
         "gun",
