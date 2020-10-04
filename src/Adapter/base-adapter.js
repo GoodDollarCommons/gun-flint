@@ -192,7 +192,7 @@ export default class BaseAdapter extends BaseExtension {
     afterRead(dedupId, err, data) {
         this._recordGet(dedupId);
         const soul = data ? (data['_'] || {})['#'] : undefined;
-        const put = soul ? { [soul]: data } : undefined;
+        const put = soul ? { [soul]: data } : {};
         this.context.on('in', {
             '@': dedupId,
             put,
