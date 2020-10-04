@@ -1,4 +1,4 @@
-module.exports = function(finished, args, Adapter, opt) {
+module.exports = function (finished, args, Adapter, opt) {
     const path = require('path');
     const Mocha = require('mocha');
     const fs = require('fs');
@@ -6,13 +6,13 @@ module.exports = function(finished, args, Adapter, opt) {
     // Essential opt setup
     opt = opt || {};
     opt.file = false;
-    
-    const gunPath = args['skip-packaged-gun'] ? 'gun/gun' : './../gun/gun';
+
+    const gunPath = 'gun';
     global.Gun = require(gunPath);
 
     // Gun not found. Error out
     if (!global.Gun) {
-        throw "GUN NOT FOUND! Unable to continue integration tests. If using the --skip-packaged-gun flag, be sure that gun is available included in node modules.";
+        throw 'GUN NOT FOUND! Unable to continue integration tests. If using the --skip-packaged-gun flag, be sure that gun is available included in node modules.';
     }
 
     Adapter.bootstrap(global.Gun);
@@ -23,20 +23,21 @@ module.exports = function(finished, args, Adapter, opt) {
     global.data = require('./data');
 
     // Ensure unique identity for this test run.
-    global.keyBase = Date.now() + "";    
+    global.keyBase = Date.now() + '';
     global.getKey = (suffix) => {
         return `${keyBase}_${suffix}`;
-    }
+    };
 
     // An easy way to re-create gun as needed
-    global.getGun = function() {
+    global.getGun = function () {
+        opt.localStorage = false;
         return new Gun(opt);
-    }
-
+    };
 
     // Log warning
-    console.info("You are about to run an integration test suite against your adapter. If this is linked to a storage layer, it WILL write records to that storage layer.");
-
+    console.info(
+        'You are about to run an integration test suite against your adapter. If this is linked to a storage layer, it WILL write records to that storage layer.',
+    );
 
     // Instantiate a Mocha instance.
     var mocha = new Mocha();
@@ -44,19 +45,18 @@ module.exports = function(finished, args, Adapter, opt) {
     let testDir = path.join(__dirname, 'suite/');
 
     // Add each .js file to the mocha instance
-    fs.readdirSync(testDir).filter(function(file){
-        // Only keep the .js files
-        return file.substr(-3) === '.js';
-
-    }).forEach(function(file) {
-        mocha.addFile(
-            path.join(testDir, file)
-        );
-    });
+    fs.readdirSync(testDir)
+        .filter(function (file) {
+            // Only keep the .js files
+            return file.substr(-3) === '.js';
+        })
+        .forEach(function (file) {
+            mocha.addFile(path.join(testDir, file));
+        });
 
     // Run the tests.
     let runner = mocha.run();
     runner.on('end', () => {
         finished();
     });
-}
+};
